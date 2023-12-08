@@ -41,8 +41,6 @@ out/
 /*/build/
 /*/*/build/
 /**/.gradle/
-/**/.gradle/
-
 
 # Intellij
 .idea/**
