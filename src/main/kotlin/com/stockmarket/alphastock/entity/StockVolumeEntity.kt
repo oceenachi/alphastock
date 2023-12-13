@@ -7,6 +7,9 @@ import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import java.time.Instant
 
+/**
+ * Database representation of daily stock transaction volume.
+ */
 @Entity
 data class StockVolumeEntity(
     @Id

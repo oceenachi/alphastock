@@ -6,6 +6,7 @@ import com.stockmarket.alphastock.model.StockDataDTO
 import com.stockmarket.alphastock.repository.StockVolumeRepository
 import com.stockmarket.alphastock.service.SchedulingService
 import com.stockmarket.alphastock.service.TransactionService
+import jakarta.annotation.PostConstruct
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -18,7 +19,9 @@ import java.text.SimpleDateFormat
 import java.time.Instant
 import java.util.Date
 
-
+/**
+ * Custom implementation of the transaction service.
+ */
 @Service
 class TransactionServiceImpl @Autowired constructor(
     private val restTemplate: RestTemplate,
@@ -30,6 +33,7 @@ class TransactionServiceImpl @Autowired constructor(
 ) : TransactionService, SchedulingService {
 
     private val formatter = SimpleDateFormat(FORMAT_PATTERN)
+    val tickerSymbols = listOf("IBM", "TSLA", "WMT", "AMZN", "XOM", "AAPL", "UNH", "CVS", "GOOG")
 
     override fun getStockVolume(date: Date?): StockDataDTO {
         val dateString = formatter.format(date ?: Date.from(Instant.now()))
@@ -42,7 +46,6 @@ class TransactionServiceImpl @Autowired constructor(
     }
 
     override fun fetchAndProcessDailyStockVolume() {
-        val tickerSymbols = listOf("IBM", "TSLA", "WMT", "AMZN", "XOM", "AAPL", "UNH", "CVS")
         var date: String? = null
         val totalVolume = tickerSymbols.fold(0L) { acc, tickerSymbol ->
             try {
