@@ -76,11 +76,6 @@ class TransactionServiceImpl @Autowired constructor(
         logger.info("New stock volume for $date saved successfully")
     }
 
-    @PostConstruct
-    fun init() {
-        fetchAndProcessDailyStockVolume()
-    }
-
     companion object {
         val logger = KotlinLogging.logger {}
         const val TIME_SERIES_IDENTIFIER = "Time Series (Daily)"
