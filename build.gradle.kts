@@ -27,6 +27,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.2")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.postgresql:postgresql")
+    implementation ("io.github.microutils:kotlin-logging-jvm:2.0.11")
+    implementation ("ch.qos.logback:logback-classic:1.2.6")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 }
 

@@ -10,7 +10,7 @@ import jakarta.annotation.PostConstruct
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import org.slf4j.LoggerFactory
+import mu.KotlinLogging
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
@@ -46,6 +46,7 @@ class TransactionServiceImpl @Autowired constructor(
     }
 
     override fun fetchAndProcessDailyStockVolume() {
+        logger.info("Starting daily stock volume processing")
         var date: String? = null
         val totalVolume = tickerSymbols.fold(0L) { acc, tickerSymbol ->
             try {
@@ -72,10 +73,16 @@ class TransactionServiceImpl @Autowired constructor(
                 createdAt = Instant.now()
             )
         )
+        logger.info("New stock volume for $date saved successfully")
+    }
+
+    @PostConstruct
+    fun init() {
+        fetchAndProcessDailyStockVolume()
     }
 
     companion object {
-        val logger = LoggerFactory.getLogger(TransactionServiceImpl::class.java)
+        val logger = KotlinLogging.logger {}
         const val TIME_SERIES_IDENTIFIER = "Time Series (Daily)"
         const val FORMAT_PATTERN = "yyyy-MM-dd"
     }
