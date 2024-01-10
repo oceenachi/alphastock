@@ -1,12 +1,10 @@
 package com.stockmarket.alphastock.service.impl
 
 import com.stockmarket.alphastock.entity.StockVolumeEntity
-import com.stockmarket.alphastock.exception.AlphaStockException
 import com.stockmarket.alphastock.model.StockDataDTO
 import com.stockmarket.alphastock.repository.StockVolumeRepository
 import com.stockmarket.alphastock.service.SchedulingService
 import com.stockmarket.alphastock.service.TransactionService
-import jakarta.annotation.PostConstruct
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -35,29 +33,39 @@ class TransactionServiceImpl @Autowired constructor(
     private val formatter = SimpleDateFormat(FORMAT_PATTERN)
     val tickerSymbols = listOf("IBM", "TSLA", "WMT", "AMZN", "XOM", "AAPL", "UNH", "CVS", "GOOG")
 
-    override fun getStockVolume(date: Date?): StockDataDTO {
-        val dateString = formatter.format(date ?: Date.from(Instant.now()))
-        return stockVolumeRepository.findByDate(dateString)?.let { StockDataDTO(dateString, it.volume, null) }
-            ?: StockDataDTO(
+    override fun getStockVolume(date: Date): StockDataDTO {
+        val dateString = formatter.format(date)
+        if (date.after(Date.from(Instant.now()))) {
+            return StockDataDTO(
                 dateString,
                 null,
-                "The daily stock volume for the requested date, $dateString is not yet available"
+                "Date must be on or before current date of US/Eastern timezone"
             )
+        }
+        val stockVolume = stockVolumeRepository.findByDate(dateString)
+        val stockVolumeEntity = stockVolume ?: fetchAndProcessDailyStockVolume(dateString)
+
+        return stockVolumeEntity?.let { StockDataDTO(dateString, stockVolumeEntity.volume, null) } ?: StockDataDTO(
+            dateString,
+            null,
+            "The daily stock volume for the requested date, $dateString is not yet available"
+        )
     }
 
-    override fun fetchAndProcessDailyStockVolume() {
+    override fun fetchAndProcessDailyStockVolume(dateString: String): StockVolumeEntity? {
         logger.info("Starting daily stock volume processing")
-        var date: String? = null
         val totalVolume = tickerSymbols.fold(0L) { acc, tickerSymbol ->
             try {
                 val response =
-                    restTemplate.getForObject("$url&symbol=$tickerSymbol&apikey=$apiKey", String::class.java)
-                        ?: throw AlphaStockException("Error fetching data for ticker symbol $tickerSymbol")
+                    restTemplate.getForObject(
+                        "$url&symbol=$tickerSymbol&apikey=$apiKey&outputsize=full",
+                        String::class.java
+                    )
+                        ?: return null
                 val timeSeriesMetadata =
-                    Json.parseToJsonElement(response).jsonObject[TIME_SERIES_IDENTIFIER]?.jsonObject?.entries?.firstOrNull()
+                    Json.parseToJsonElement(response).jsonObject[TIME_SERIES_IDENTIFIER]?.jsonObject?.get(dateString)
                 timeSeriesMetadata?.let {
-                    date = timeSeriesMetadata.key
-                    val currentVolume = it.value.jsonObject["5. volume"]?.jsonPrimitive?.content?.toLongOrNull() ?: 0L
+                    val currentVolume = it.jsonObject["5. volume"]?.jsonPrimitive?.content?.toLongOrNull() ?: 0L
                     acc + currentVolume
                 } ?: acc
             } catch (ex: Exception) {
@@ -65,15 +73,17 @@ class TransactionServiceImpl @Autowired constructor(
                 acc
             }
         }
-        stockVolumeRepository.save(
+        val stockVolumeEntity = stockVolumeRepository.save(
             StockVolumeEntity(
                 id = -1,
-                date = date!!,
+                date = dateString,
                 volume = totalVolume,
                 createdAt = Instant.now()
             )
         )
-        logger.info("New stock volume for $date saved successfully")
+        logger.info("New stock volume for $dateString saved successfully")
+
+        return stockVolumeEntity
     }
 
     companion object {

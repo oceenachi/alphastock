@@ -8,5 +8,5 @@ import java.util.Date
  */
 interface TransactionService {
     //Fetch the stock volume of a given date.
-    fun getStockVolume(date: Date?): StockDataDTO
+    fun getStockVolume(date: Date): StockDataDTO
 }
