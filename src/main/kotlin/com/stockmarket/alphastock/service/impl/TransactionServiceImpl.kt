@@ -15,6 +15,10 @@ import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
 import java.text.SimpleDateFormat
 import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import java.util.Date
 
 /**
@@ -53,12 +57,13 @@ class TransactionServiceImpl @Autowired constructor(
     }
 
     override fun fetchAndProcessDailyStockVolume(dateString: String): StockVolumeEntity? {
+        val outputSize = if (isWithinLast100Days(dateString)) "outputsize=compact" else "outputsize=full"
         logger.info("Starting daily stock volume processing")
         val totalVolume = tickerSymbols.fold(0L) { acc, tickerSymbol ->
             try {
                 val response =
                     restTemplate.getForObject(
-                        "$url&symbol=$tickerSymbol&apikey=$apiKey&outputsize=full",
+                        "$url&symbol=$tickerSymbol&apikey=$apiKey&$outputSize",
                         String::class.java
                     )
                         ?: return null
@@ -84,6 +89,13 @@ class TransactionServiceImpl @Autowired constructor(
         logger.info("New stock volume for $dateString saved successfully")
 
         return stockVolumeEntity
+    }
+
+    fun isWithinLast100Days(dateToCheck: String): Boolean {
+        val timeZone = ZoneId.of("America/New_York")
+        val currentDate = LocalDate.now(timeZone)
+        val dateToCheckParsed = LocalDate.parse(dateToCheck, DateTimeFormatter.ISO_DATE).atStartOfDay(timeZone).toLocalDate()
+        return dateToCheckParsed.isAfter(currentDate.minus(100, ChronoUnit.DAYS))
     }
 
     companion object {
