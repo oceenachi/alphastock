@@ -47,6 +47,7 @@ class TransactionServiceImpl @Autowired constructor(
             )
         }
         val stockVolume = stockVolumeRepository.findByDate(dateString)
+        logger.info { "Stock Volume $stockVolume" }
         val stockVolumeEntity = stockVolume ?: fetchAndProcessDailyStockVolume(dateString)
 
         return stockVolumeEntity?.let { StockDataDTO(dateString, stockVolumeEntity.volume, null) } ?: StockDataDTO(
@@ -57,18 +58,20 @@ class TransactionServiceImpl @Autowired constructor(
     }
 
     override fun fetchAndProcessDailyStockVolume(dateString: String): StockVolumeEntity? {
-        val outputSize = if (isWithinLast100Days(dateString)) "outputsize=compact" else "outputsize=full"
-        logger.info("Starting daily stock volume processing")
+        val outputSize = if (isWithinLast100Days(dateString)) "compact" else "full"
+        logger.info("Starting daily stock volume processing, outputSize: $outputSize")
         val totalVolume = tickerSymbols.fold(0L) { acc, tickerSymbol ->
             try {
                 val response =
                     restTemplate.getForObject(
-                        "$url&symbol=$tickerSymbol&apikey=$apiKey&$outputSize",
+                        "$url&symbol=$tickerSymbol&apikey=$apiKey&outputsize=$outputSize",
                         String::class.java
                     )
                         ?: return null
+                println("RESP $response")
                 val timeSeriesMetadata =
                     Json.parseToJsonElement(response).jsonObject[TIME_SERIES_IDENTIFIER]?.jsonObject?.get(dateString)
+                logger.info { "Metadata $timeSeriesMetadata" }
                 timeSeriesMetadata?.let {
                     val currentVolume = it.jsonObject["5. volume"]?.jsonPrimitive?.content?.toLongOrNull() ?: 0L
                     acc + currentVolume
@@ -95,6 +98,7 @@ class TransactionServiceImpl @Autowired constructor(
         val timeZone = ZoneId.of("America/New_York")
         val currentDate = LocalDate.now(timeZone)
         val dateToCheckParsed = LocalDate.parse(dateToCheck, DateTimeFormatter.ISO_DATE).atStartOfDay(timeZone).toLocalDate()
+        println("$dateToCheck AND $dateToCheckParsed")
         return dateToCheckParsed.isAfter(currentDate.minus(100, ChronoUnit.DAYS))
     }
 
