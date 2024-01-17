@@ -48,6 +48,7 @@ class TransactionServiceImpl @Autowired constructor(
         }
         val stockVolume = stockVolumeRepository.findByDate(dateString)
         val stockVolumeEntity = stockVolume ?: fetchAndProcessDailyStockVolume(dateString)
+        logger.info { "SV $stockVolumeEntity" }
 
         return stockVolumeEntity?.let { StockDataDTO(dateString, stockVolumeEntity.volume, null) } ?: StockDataDTO(
             dateString,
@@ -94,7 +95,8 @@ class TransactionServiceImpl @Autowired constructor(
     fun isWithinLast100Days(dateToCheck: String): Boolean {
         val timeZone = ZoneId.of("America/New_York")
         val currentDate = LocalDate.now(timeZone)
-        val dateToCheckParsed = LocalDate.parse(dateToCheck, DateTimeFormatter.ISO_DATE).atStartOfDay(timeZone).toLocalDate()
+        val dateToCheckParsed =
+            LocalDate.parse(dateToCheck, DateTimeFormatter.ISO_DATE).atStartOfDay(timeZone).toLocalDate()
         return dateToCheckParsed.isAfter(currentDate.minus(100, ChronoUnit.DAYS))
     }
 
