@@ -68,14 +68,17 @@ class TransactionServiceImpl @Autowired constructor(
                         String::class.java
                     )
                         ?: return null
+                logger.info { "RESPONSE $response" }
                 val timeSeriesMetadata =
                     Json.parseToJsonElement(response).jsonObject[TIME_SERIES_IDENTIFIER]?.jsonObject?.get(dateString)
+                logger.info { "TIMESERIES $timeSeriesMetadata" }
                 timeSeriesMetadata?.let {
                     val currentVolume = it.jsonObject["5. volume"]?.jsonPrimitive?.content?.toLongOrNull() ?: 0L
+                    logger.info { "CURRENT VOL $currentVolume" }
                     acc + currentVolume
                 } ?: acc
             } catch (ex: Exception) {
-                logger.error(ex.message)
+                logger.error{ex.message}
                 acc
             }
         }
